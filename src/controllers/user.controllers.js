@@ -6,6 +6,8 @@ import {ApiResponse} from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
 
+
+
 const generateAccessandRefreshTokens = async(userId) => {
     try{
         const user = await User.findById(userId)
@@ -114,7 +116,7 @@ const loginUser = asyncHandler(async (req,res) => {
 
     const {email,username, password} = req.body
 
-    if(!(username || email)){
+    if(!username && !email){
         throw new ApiError(400, "username or email is required")
     }
 
@@ -126,11 +128,13 @@ const loginUser = asyncHandler(async (req,res) => {
         throw new ApiError(404,"User does not exists")
     }
 
-
-    const isPasswordValid= await user.isPasswordCorrect(password)
-
-    if(!isPasswordValid) {
-        throw new ApiError(401,"Invalid user credentials")
+    try {
+        const isPasswordValid = await user.isPasswordCorrect(password);
+        if (!isPasswordValid) {
+            throw new ApiError(401, "Invalid user credentials");
+        }
+    } catch (error) {
+        throw new ApiError(500, "Error verifying password");
     }
 
    
@@ -167,8 +171,8 @@ const logoutUser = asyncHandler(async(req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1
             }
         },
         {
