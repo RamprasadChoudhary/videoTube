@@ -7,7 +7,7 @@ import {
     subscriptionByMonth,
     subscriptionPerDay,
     VideoInfo,
-} from "../controllers/dashboard.controller.js"
+} from "../controllers/dashboard.controllers.js"
 import {verifyJWT} from "../middlewares/auth.middleware.js"
 
 const router = Router();
