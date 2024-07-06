@@ -1,12 +1,33 @@
 import {asyncHandler} from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.model.js"
-import { uploadOnCloudinary} from "../utils/cloundinary.js"
+import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloundinary.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
+import fs from 'fs';
 
 
+import { sendEmail } from '../utils/emailSend.js';
+import { generateVerificationToken } from '../utils/generateTokens.js';
+
+const accessTokenCookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "PRODUCTION",
+    sameSite: process.env.NODE_ENV === "PRODUCTION" ? "None" : "Lax",
+    expires: new Date(
+        Date.now() + Number(process.env.ACCESS_TOKEN_COOKIE_EXPIRY) * 24 * 60 * 60 * 1000
+    ),
+}
+
+const refreshTokenCookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "PRODUCTION",
+    sameSite: process.env.NODE_ENV === "PRODUCTION" ? "None" : "Lax",
+    expires: new Date(
+        Date.now() + Number(process.env.REFRESH_TOKEN_COOKIE_EXPIRY) * 24 * 60 * 60 * 1000
+    ),
+}
 
 const generateAccessandRefreshTokens = async(userId) => {
     try{
@@ -105,6 +126,33 @@ const registerUser =  asyncHandler( async (req,res) => {
     )
 
 } )
+
+const sendVerificationEmail = asyncHandler(async(req,res)=>{
+    
+    try {
+            //TODO: dont directly send email from input box rather take it from user if response is of status > or something indicating correct response and based on that you have to have to send the data through navigation or something like that or just simply give the email recieved from the server therefore changing the email doesnt changes our output 
+            //TODO:
+            const {email} = req.body;
+            if(!email) throw new ApiError(400,'email is required for verification mail ');
+            
+            await sendEmail(res,"verifyEmail",email);
+            return res.status(200).json(
+                new ApiResponse(200,'verification mail sent')
+            )
+    } catch (error) {
+             
+        res
+        .status(error?.statusCode||500)
+        .json({
+           status:error?.statusCode||500,
+           message:error?.message||"some error in sending verification email ",
+           originOfError:"user controller"
+        })
+    
+    }
+    
+    
+    })
 
 const loginUser = asyncHandler(async (req,res) => {
     // req body -> data
@@ -262,6 +310,166 @@ const changeCurrentPassword = asyncHandler(async(req,res) => {
     .status(200)
     .json(new ApiResponse(200,{},"Password changed successfully"))
 })
+
+const sendEmailForPasswordOtp = asyncHandler(async(req,res)=>{
+    try {
+       
+       
+        const {email} = req.body;
+        if(!email) throw new ApiError(400,"email is absent");
+
+  
+
+        await sendEmail(res,"forgotPassword",email);
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200, 
+                {},
+                "otp send successfully successfully"
+            )
+        )
+
+
+    } catch (error) {
+        res
+        .status(error?.statusCode||500)
+        .json({
+           status:error?.statusCode||500,
+           message:error?.message||" error in sending email for password otp ",
+           originOfError:"user controller"
+        })
+    }
+})
+
+const verifyOtp = asyncHandler(async(req,res)=>{
+    try{
+       const { otp } = req.body;
+       if(!otp) throw new ApiError(400,"otp is absent");
+
+       const user = await User.findOne({
+        forgotPasswordToken:otp
+       });
+
+       if(!user) throw new ApiError(400,"invalid otp");
+
+       if(Date.now()>user.forgotPasswordTokenExpiry){
+         await sendEmail(res,"forgotPassword",user.email);
+         throw new ApiError(410,"otp has expired and a new otp has been sent through email");
+       }
+       
+       user.resetPasswordAccess = generateVerificationToken(30);
+       user.forgotPasswordToken = null;
+       user.forgotPasswordTokenExpiry = null;
+       await user.save({
+        validateBeforeSave:false
+       })
+
+       res.status(200).json(new ApiResponse(200,{
+        success:true,
+        resetPasswordAccess: user.resetPasswordAccess,
+       },'otp verified successfully'))    
+    }
+    catch(error){
+        res
+        .status(error?.statusCode||500)
+        .json({
+           status:error?.statusCode||500,
+           message:error?.message||"some error in registering user ",
+           originOfError:"user controller"
+        })
+    }
+});
+
+const resetPassword = asyncHandler(async(req,res)=>{
+    try {
+     const {newPassword,confirmNewPassword,resetPasswordAccess} = req.body;
+     // verify otp is true or false 
+     if(!resetPasswordAccess) throw new ApiError(400,'verify otp first');
+     if(!newPassword || !confirmNewPassword) throw new ApiError(400,'enter both password');
+    
+     const user = await User.findOne({resetPasswordAccess});
+ 
+     const isPasswordCorrect = newPassword == confirmNewPassword ;
+     if(!isPasswordCorrect) throw new ApiError(400,"both password don't match");
+ 
+     user.password = newPassword ;
+     user.resetPasswordAccess = null;
+     await user.save({
+         validateBeforeSave:false
+     });
+     
+     return res
+     .status(200)
+     .json(
+         new ApiResponse(
+             200,
+             {success:"true"},
+             "password changed successfully"
+         )
+     )
+ 
+    } catch (error) {
+    
+     res
+     .status(error?.statusCode||500)
+     .json({
+        status:error?.statusCode||500,
+        message:error?.message||"some error in registering user ",
+        originOfError:"user controller"
+     })
+    }
+ });
+
+
+const verifyEmail = asyncHandler(async(req,res)=>{
+    try {
+        const { token } = req.body;
+        if(!token) throw new ApiError(403,"verifyToken is absent")
+        const user = await User
+                           .findOne({ verifyEmailToken : token})
+                           .select("-password -refreshToken -accessToken");
+    
+        if(!user) throw new ApiError(400,"invalid token");
+        
+        if(Date.now()>user.verifyEmailTokenExpiry){
+        await sendEmail(res,"verifyEmail",user.email);
+        throw new ApiError(410," verify token has expired and a new verification mail has been sent please verify");
+        }
+  
+    
+        user.isVerified = true ;
+        user.verifyEmailToken = "" ;
+        user.verifyEmailTokenExpiry="";
+        
+        await user.save({
+            validateBeforeSave:false
+        });
+        //console.log(user);
+       
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                user,
+                "email verified successfully"
+            )
+        )
+    } catch (error) {
+        res
+        .status(error?.statusCode||500)
+        .json({
+           status:error?.statusCode||500,
+           message:error?.message||"some error in getting verifying user email ",
+           originOfError:"user controller"
+        })
+    }
+
+})
+
 
 const getCurrentUser = asyncHandler(async(req,res) => {
     return res
@@ -491,6 +699,7 @@ const getWatchHistory = asyncHandler(async(req,res) => {
 })
 
 
+
 export {
     registerUser,
     loginUser,
@@ -502,5 +711,10 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    verifyEmail,
+    sendEmailForPasswordOtp,
+    verifyOtp,
+    resetPassword,
+    sendVerificationEmail
 }
