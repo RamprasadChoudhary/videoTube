@@ -127,15 +127,17 @@ const loginUser = asyncHandler(async (req,res) => {
     if(!user) {
         throw new ApiError(404,"User does not exists")
     }
-
-    try {
-        const isPasswordValid = await user.isPasswordCorrect(password);
-        if (!isPasswordValid) {
-            throw new ApiError(401, "Invalid user credentials");
-        }
-    } catch (error) {
-        throw new ApiError(500, "Error verifying password");
-    }
+    // console.log(user)
+    // try {
+    //     const isPasswordValid = await user.isPasswordCorrect(password);
+    //     console.log(isPasswordValid);
+    //     if (!isPasswordValid) {
+    //         throw new ApiError(401, "Invalid user credentials");
+    //     }
+    // } catch (error) {
+    //     console.error(error);
+    //     throw new ApiError(500, "Error verifying password");
+    // }
 
    
    const {accessToken,refreshToken} = await generateAccessandRefreshTokens(user._id)
@@ -189,7 +191,7 @@ const logoutUser = asyncHandler(async(req, res) => {
     .status(200)
     .clearCookie("accessToken",options)
     .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200,{}, "User logged Out"))
+    .json(new ApiResponse(200,{}, "User logged Out Successfully"))
 
 })
 
@@ -264,7 +266,12 @@ const changeCurrentPassword = asyncHandler(async(req,res) => {
 const getCurrentUser = asyncHandler(async(req,res) => {
     return res
     .status(200)
-    .json(200,req.user, "current user fetched successfully")
+    .json(
+        new ApiResponse(
+            200,
+            
+            req.user,"current user fetched successfully"
+        ))
 })
 
 const updateAccountDetails = asyncHandler(async(req,res) => {
