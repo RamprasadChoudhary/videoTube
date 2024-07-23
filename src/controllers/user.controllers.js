@@ -1,7 +1,7 @@
 import {asyncHandler} from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.model.js"
-import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloundinary.js"
+import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
@@ -172,21 +172,24 @@ const loginUser = asyncHandler(async(req,res)=>{
               $or:[{username},{email}]
           })
           if(!user) throw new ApiError(404,'user not found');
-         // console.log(user)
-          const passwordCheck = await user.isPasswordCorrect(password);
+            //console.log(user)
+        //   const passwordCheck = await user.isPasswordCorrect(password);
       
-          if(!passwordCheck) throw new ApiError(401,'password is incorrect')
+        //   if(!passwordCheck) throw new ApiError(401,'password is incorrect')
           
-          const {accessToken,refreshToken} = await generateRefreshAndAccessToken(user._id);
+          const {accessToken,refreshToken} = await generateAccessandRefreshTokens(user._id);
           
           const loggedInUser = await User.findById(user._id).select('-password -refreshToken -updatedAt -__v');
       
-       
+          const options = {
+            httpOnly: true,
+            secure: true
+        }
            
           return res
           .status(200)
-          .cookie('accessToken',accessToken,accessTokenCookieOptions)
-          .cookie('refreshToken',refreshToken,refreshTokenCookieOptions)
+          .cookie('accessToken',accessToken,options)
+          .cookie('refreshToken',refreshToken,options)
           .json(
               new ApiResponse(
                   200,

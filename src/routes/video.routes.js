@@ -10,7 +10,7 @@ import {
     channelsVideo,
     getSearchRecommendations,
     getAllVideosCount
-} from "../controllers/video.controller.js"
+} from "../controllers/video.controllers.js"
 import {verifyJWT} from "../middlewares/auth.middleware.js"
 import { upload } from "../middlewares/multer.middlewares.js";
 

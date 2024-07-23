@@ -25,7 +25,7 @@ export async function sendEmail(res,type,emailId,videoId,videoTitle){
       user.verifyEmailToken = verificationToken ;
       user.verifyEmailTokenExpiry = Date.now() + 1800000 ;
         const { data, error } = await resend.emails.send({
-            from: "ClipSync <auth@clipsync.dhatrish.online>",
+            from: "ClipSync <ramranwa6@gmail.com>",
             to: emailId,
             subject: "ClipSync | Verification Email",
             html: verificationEmail(user.username,verificationToken),
@@ -43,7 +43,7 @@ export async function sendEmail(res,type,emailId,videoId,videoTitle){
          user.forgotPasswordToken = otp;
          user.forgotPasswordTokenExpiry = Date.now() + 600000;
          const { data, error } = await resend.emails.send({
-            from: "ClipSync <auth@clipsync.dhatrish.online>",
+            from: "ClipSync <ramranwa6@gmail.com>",
             //TODO: before shipping make sure emailId is there
             to: emailId,
             //to:"official.dhatrishdixit@gmail.com",
