@@ -15,6 +15,7 @@ VideoTube is a video sharing platform where users can register, upload, and view
 - **Server-Side Logic and Database Management**: Utilized Node.js and Express.js, handling 500+ requests/second, and created 5+ MongoDB aggregation pipelines, enhancing data retrieval speed by 25%.
 
 ## Project Structure
+```bash
 /videoTube
 │
 ├── /server # Backend code
@@ -29,7 +30,7 @@ VideoTube is a video sharing platform where users can register, upload, and view
 ├── package.json # Project dependencies and scripts
 ├── README.md # Project documentation
 └── ...
-
+```
 
 ## Controllers
 
