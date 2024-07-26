@@ -155,5 +155,5 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
       ```
 
 4. **Access the Application**:
-    - Open your browser and navigate to `http://localhost:3000` for the frontend, and `http://localhost:5000/api` for the backend API.
+    - Open your browser and navigate  `http://localhost:5000/api` for the backend API.
 
