@@ -10,6 +10,7 @@ import fs from 'fs';
 
 import { sendEmail } from '../utils/emailSend.js';
 import { generateVerificationToken } from '../utils/generateTokens.js';
+import { console } from "inspector";
 
 const accessTokenCookieOptions = {
     httpOnly: true,
@@ -245,6 +246,7 @@ const logoutUser = asyncHandler(async(req, res) => {
 
 const refreshAccessToken = asyncHandler(async(req, res) =>{
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+
 
     if(!incomingRefreshToken){
         throw new ApiError(401, "unauthorized request")
